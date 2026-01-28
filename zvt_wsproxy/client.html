@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZVT WebSocket Proxy Client</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: calc(100vh - 40px);
+        }
+
+        .panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .panel-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        button {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-connect {
+            background-color: #10b981;
+            color: white;
+            grid-column: 1;
+        }
+
+        .btn-connect:hover:not(:disabled) {
+            background-color: #059669;
+        }
+
+        .btn-disconnect {
+            background-color: #ef4444;
+            color: white;
+            grid-column: 2;
+        }
+
+        .btn-disconnect:hover:not(:disabled) {
+            background-color: #dc2626;
+        }
+
+        .btn-command {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .btn-command:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+
+        .status {
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .status.disconnected {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status.connected {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        #console {
+            background-color: #1f2937;
+            color: #10b981;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            overflow-y: auto;
+            flex: 1;
+            word-break: break-all;
+            white-space: pre-wrap;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+        }
+
+        .log-time {
+            color: #6b7280;
+            margin-right: 8px;
+        }
+
+        .log-sent {
+            color: #60a5fa;
+        }
+
+        .log-received {
+            color: #10b981;
+        }
+
+        .log-error {
+            color: #f87171;
+        }
+
+        .divider {
+            border-top: 2px solid #e5e7eb;
+            margin: 15px 0;
+        }
+
+        .command-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .command-section h3 {
+            grid-column: 1 / -1;
+            color: #667eea;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Control Panel -->
+        <div class="panel">
+            <div class="panel-header">📡 Steuerung</div>
+            <div class="panel-content">
+                <div id="status" class="status disconnected">⚫ Getrennt</div>
+                
+                <div class="button-group">
+                    <button class="btn-connect" id="connectBtn">🔗 Verbinden</button>
+                    <button class="btn-disconnect" id="disconnectBtn" disabled>✖ Trennen</button>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="command-section">
+                    <h3>🔐 Authentifizierung</h3>
+                    <button class="btn-command" id="connectCmd">Connect</button>
+                    <button class="btn-command" id="registrationCmd">Registration</button>
+                </div>
+
+                <div class="command-section">
+                    <h3>💳 Transaktion</h3>
+                    <button class="btn-command" id="authorizationCmd">Authorization</button>
+                    <button class="btn-command" id="endofdayCmd">EndOfDay</button>
+                </div>
+
+                <div class="command-section">
+                    <h3>❌ Fehlerbehandlung</h3>
+                    <button class="btn-command" id="ackCmd">ACK</button>
+                    <button class="btn-command" id="nackCmd100">Nack Code 100</button>
+                    <button class="btn-command" id="nackCmd120">Nack Code 120</button>
+                    <button class="btn-command" id="nackCmd255">Nack Code 255</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log Console -->
+        <div class="panel">
+            <div class="panel-header">📊 Konsole</div>
+            <div class="panel-content">
+                <div id="console"></div>
+                <button style="background-color: #6b7280; color: white; align-self: flex-end; margin-top: 10px;" id="clearBtn">Löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const WS_URL = 'ws://127.0.0.1:22222';
+        let ws = null;
+
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const statusEl = document.getElementById('status');
+        const console_el = document.getElementById('console');
+        const clearBtn = document.getElementById('clearBtn');
+
+        // Status display
+        function updateStatus(connected) {
+            if (connected) {
+                statusEl.textContent = '🟢 Verbunden';
+                statusEl.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                document.querySelectorAll('.btn-command').forEach(btn => btn.disabled = false);
+            } else {
+                statusEl.textContent = '⚫ Getrennt';
+                statusEl.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                document.querySelectorAll('.btn-command').forEach(btn => btn.disabled = true);
+            }
+        }
+
+        // Logging
+        function log(message, type = 'info') {
+            const time = new Date().toLocaleTimeString('de-DE', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            let logClass = '';
+            let prefix = '';
+            switch (type) {
+                case 'sent':
+                    logClass = 'log-sent';
+                    prefix = '→ [GESENDET]';
+                    break;
+                case 'received':
+                    logClass = 'log-received';
+                    prefix = '← [EMPFANGEN]';
+                    break;
+                case 'error':
+                    logClass = 'log-error';
+                    prefix = '⚠ [FEHLER]';
+                    break;
+                default:
+                    prefix = '• [INFO]';
+            }
+            
+            entry.innerHTML = `<span class="log-time">${time}</span><span class="${logClass}">${prefix} ${message}</span>`;
+            console_el.appendChild(entry);
+            console_el.scrollTop = console_el.scrollHeight;
+        }
+
+        // Connect
+        connectBtn.addEventListener('click', () => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('WebSocket ist bereits verbunden', 'error');
+                return;
+            }
+
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                updateStatus(true);
+                log('WebSocket verbunden: ' + WS_URL);
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    log(JSON.stringify(data, null, 2), 'received');
+                } catch (e) {
+                    log(event.data, 'received');
+                }
+            };
+
+            ws.onerror = (error) => {
+                log('Fehler: ' + error.message, 'error');
+                updateStatus(false);
+            };
+
+            ws.onclose = () => {
+                log('WebSocket getrennt');
+                updateStatus(false);
+            };
+        });
+
+        // Disconnect
+        disconnectBtn.addEventListener('click', () => {
+            if (ws) {
+                ws.close();
+            }
+        });
+
+        // Send command helper
+        function sendCommand(command, label) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('WebSocket nicht verbunden!', 'error');
+                return;
+            }
+            
+            const json = JSON.stringify(command);
+            ws.send(json);
+            log(label + ': ' + json, 'sent');
+        }
+
+        // Command buttons
+        document.getElementById('connectCmd').addEventListener('click', () => {
+            sendCommand({
+                command: 'Connect',
+                payload: { ip: '127.0.0.1', port: 22000 }
+            }, 'Connect');
+        });
+
+        document.getElementById('registrationCmd').addEventListener('click', () => {
+            sendCommand({
+                command: 'Registration',
+                payload: { password: 123456, config_byte: 222, currency: 978 }
+            }, 'Registration');
+        });
+
+        document.getElementById('authorizationCmd').addEventListener('click', () => {
+            sendCommand({
+                command: 'Authorization',
+                payload: { amount: 2500, payment_type: 64 }
+            }, 'Authorization');
+        });
+
+        document.getElementById('endofdayCmd').addEventListener('click', () => {
+            sendCommand({
+                command: 'EndOfDay',
+                payload: { password: 123456 }
+            }, 'EndOfDay');
+        });
+
+        document.getElementById('ackCmd').addEventListener('click', () => {
+            sendCommand({
+                command: 'Ack',
+                payload: { code: 0 }
+            }, 'Ack');
+        });
+
+        document.getElementById('nackCmd100').addEventListener('click', () => {
+            sendCommand({
+                command: 'Ack',
+                payload: { code: 100 }
+            }, 'Nack (code 100)');
+        });
+
+        document.getElementById('nackCmd120').addEventListener('click', () => {
+            sendCommand({
+                command: 'Ack',
+                payload: { code: 120 }
+            }, 'Nack (code 120)');
+        });
+
+        document.getElementById('nackCmd255').addEventListener('click', () => {
+            sendCommand({
+                command: 'Ack',
+                payload: { code: 255 }
+            }, 'Nack (code 255)');
+        });
+
+        // Clear console
+        clearBtn.addEventListener('click', () => {
+            console_el.innerHTML = '';
+            log('Konsole geleert');
+        });
+
+        // Initialize
+        updateStatus(false);
+    </script>
+</body>
+</html>

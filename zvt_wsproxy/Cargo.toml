@@ -1,0 +1,27 @@
+[package]
+name = "zvt_wsproxy"
+edition = "2021"
+authors.workspace = true
+categories.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+description = """
+A websocket proxy to ZVT payment terminals.
+"""
+
+[dependencies]
+clap = { version = "4.5.53", features = ["cargo", "string", "derive"] }
+tokio = { version = "1.47.1", features = ["full"] }
+tokio-tungstenite = "0.24"
+tokio-stream = "0.1.14"
+futures = "0.3"
+tracing = "0.1.42"
+tracing-subscriber = { version = "0.3.21", features = ["env-filter"] }
+anyhow = "1.0.99"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = { version = "1.0.142", features = ["alloc", "preserve_order"] }
+num-traits = "0.2"
+zvt = { version = "0.1.0", path = "../zvt" }
+serde_with = "3.16.1"
