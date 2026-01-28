@@ -327,10 +327,11 @@ async fn authorization(
     use sequences::AuthorizationResponse::*;
     while let Some(response) = stream.next().await {
         match response? {
+            Nack(nack) => bail!("Received Nack: {}", nack.to_string()),
+            Abort(data) => bail!("Received Abort: {}", data.to_string()),
             IntermediateStatusInformation(_) | CompletionData(_) => (),
             PrintLine(data) => log::info!("{}", data.text),
             PrintTextBlock(data) => log::info!("{data:#?}"),
-            Abort(data) => bail!("Received Abort: {:?}", data),
             StatusInformation(data) => log::info!("StatusInformation: {:#?}", data),
         }
     }
@@ -351,8 +352,8 @@ async fn set_terminal_id(
     while let Some(response) = stream.next().await {
         use sequences::SetTerminalIdResponse::*;
         match response? {
+            Abort(data) => bail!("Received Abort: {}", data.to_string()),
             CompletionData(data) => log::info!("{data:#?}"),
-            Abort(_) => bail!("Failed to get system info. Received Abort."),
         }
     }
     Ok(())
@@ -365,11 +366,11 @@ async fn initialization(socket: &mut PacketTransport, password: usize) -> Result
     while let Some(response) = stream.next().await {
         use sequences::InitializationResponse::*;
         match response? {
+            Abort(data) => bail!("Received Abort: {}", data.to_string()),
             IntermediateStatusInformation(data) => log::info!("{data:#?}"),
             PrintLine(data) => log::info!("{}", data.text),
             PrintTextBlock(data) => log::info!("{data:#?}"),
             CompletionData(data) => log::info!("{data:#?}"),
-            Abort(_) => bail!("Received Abort."),
         }
     }
     Ok(())
@@ -386,11 +387,11 @@ async fn diagnosis(socket: &mut PacketTransport, args: &DiagnosisArgs) -> Result
     while let Some(response) = stream.next().await {
         use sequences::DiagnosisResponse::*;
         match response? {
+            Abort(data) => bail!("Received Abort: {}", data.to_string()),
             SetTimeAndDate(data) => log::info!("{data:#?}"),
             PrintLine(data) => log::info!("{}", data.text),
             PrintTextBlock(data) => log::info!("{data:#?}"),
             IntermediateStatusInformation(_) | CompletionData(_) => (),
-            Abort(_) => bail!("Received Abort."),
         }
     }
     Ok(())
@@ -416,11 +417,12 @@ async fn end_of_day(socket: &mut PacketTransport, password: usize) -> Result<()>
     while let Some(response) = stream.next().await {
         use sequences::EndOfDayResponse::*;
         match response? {
+            Nack(nack) => bail!("Received Nack: {}", nack.to_string()),
+            Abort(data) => bail!("Received Abort: {:?}", data),
             StatusInformation(data) => log::info!("{:?}", data),
             PrintLine(data) => log::info!("{}", data.text),
             PrintTextBlock(data) => log::info!("{data:#?}"),
             IntermediateStatusInformation(_) | CompletionData(_) => (),
-            Abort(data) => bail!("Received Abort: {:?}", data),
         }
     }
     Ok(())
@@ -441,14 +443,9 @@ async fn read_card(socket: &mut PacketTransport, args: &ReadCardArgs) -> Result<
     while let Some(response) = stream.next().await {
         use sequences::ReadCardResponse::*;
         match response? {
+            Nack(nack) => bail!("Received Nack: {}", nack.to_string()),
+            Abort(data) => bail!("Received Abort: {}", data.to_string()),
             IntermediateStatusInformation(_) => (),
-            Abort(data) => {
-                if data.error == zvt::constants::ErrorMessages::AbortViaTimeoutOrAbortKey as u8 {
-                    log::info!("No card presented before timeout.");
-                } else {
-                    bail!("Received Abort: {:?}", data);
-                }
-            }
             StatusInformation(data) => {
                 log::info!("StatusInformation: {:#?}", data);
                 // TODO(hrapp): This is taken from internal code, but should really be in the ZVT
@@ -510,10 +507,11 @@ async fn reservation(socket: &mut PacketTransport, args: ReservationArgs) -> Res
     use sequences::AuthorizationResponse::*;
     while let Some(response) = stream.next().await {
         match response? {
+            Nack(nack) => bail!("Received Abort: {:?}", nack),
+            Abort(data) => bail!("Received Abort: {:?}", data),
             IntermediateStatusInformation(_) | CompletionData(_) => (),
             PrintLine(data) => log::info!("{}", data.text),
             PrintTextBlock(data) => log::info!("{data:#?}"),
-            Abort(data) => bail!("Received Abort: {:?}", data),
             StatusInformation(data) => log::info!("StatusInformation: {:#?}", data),
         }
     }

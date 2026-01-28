@@ -9,6 +9,8 @@ use zvt_builder::ZvtSerializer;
 #[derive(ZvtEnum)]
 pub enum Ack {
     Ack(packets::Ack),
+    #[zvt_instr_any]
+    Nack(packets::Nack),
 }
 
 pub struct PacketTransport<Source> {
@@ -87,9 +89,10 @@ where
         encoding::Default: encoding::Encoding<T>,
     {
         self.write_packet(msg).await?;
-
-        let _ = self.read_packet::<Ack>().await?;
-
-        Ok(())
+        let packet = self.read_packet::<Ack>().await?;
+        match packet {
+            Ack::Ack(_) => Ok(()),
+            Ack::Nack(nack) => Err(anyhow::anyhow!(nack.to_string())),
+        }
     }
 }

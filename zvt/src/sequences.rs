@@ -93,6 +93,8 @@ pub enum AuthorizationResponse {
     CompletionData(packets::CompletionData),
     /// 2.2.9
     Abort(packets::Abort),
+    #[zvt_instr_any]
+    Nack(packets::Nack),
 }
 
 impl Sequence for Authorization {
@@ -115,7 +117,9 @@ impl Sequence for Authorization {
                 let packet = src.read_packet().await?;
                 src.write_packet(&packets::Ack {}).await?;
                 match packet {
-                    AuthorizationResponse::CompletionData(_) | AuthorizationResponse::Abort(_) => {
+                    AuthorizationResponse::Nack(_) |
+                    AuthorizationResponse::Abort(_) |
+                    AuthorizationResponse::CompletionData(_) => {
                         yield packet;
                         break;
                     }
@@ -140,6 +144,8 @@ pub enum ReadCardResponse {
     IntermediateStatusInformation(packets::IntermediateStatusInformation),
     StatusInformation(packets::StatusInformation),
     Abort(packets::Abort),
+    #[zvt_instr_any]
+    Nack(packets::Nack),
 }
 
 impl Sequence for ReadCard {
@@ -162,7 +168,9 @@ impl Sequence for ReadCard {
                 src.write_packet(&packets::Ack {}).await?;
 
                 match packet {
-                    ReadCardResponse::StatusInformation(_) | ReadCardResponse::Abort(_) => {
+                    ReadCardResponse::Nack(_) |
+                    ReadCardResponse::Abort(_) |
+                    ReadCardResponse::StatusInformation(_) => {
                         yield packet;
                         break;
                     }
@@ -217,8 +225,8 @@ impl Sequence for Initialization {
                 src.write_packet(&packets::Ack {}).await?;
 
                 match response {
-                    InitializationResponse::CompletionData(_)
-                    | InitializationResponse::Abort(_) => {
+                    InitializationResponse::Abort(_) |
+                    InitializationResponse::CompletionData(_) => {
                         yield response;
                         break;
                     }
@@ -322,8 +330,8 @@ impl Sequence for Diagnosis {
                 src.write_packet(&packets::Ack {}).await?;
 
                 match response {
-                    DiagnosisResponse::CompletionData(_)
-                    | DiagnosisResponse::Abort(_) => {
+                    DiagnosisResponse::Abort(_) |
+                    DiagnosisResponse::CompletionData(_) => {
                         yield response;
                         break;
                     }
@@ -361,6 +369,8 @@ pub enum EndOfDayResponse {
     /// Our data shows that if there is a pending transaction, the PT rather
     /// returns [packets::PartialReversalAbort] over [packets::Abort].
     Abort(packets::PartialReversalAbort),
+    #[zvt_instr_any]
+    Nack(packets::Nack),
 }
 
 impl Sequence for EndOfDay {
@@ -386,7 +396,9 @@ impl Sequence for EndOfDay {
                 // Write the response.
                 src.write_packet(&packets::Ack {}).await?;
                 match packet {
-                    EndOfDayResponse::CompletionData(_) | EndOfDayResponse::Abort(_) => {
+                    EndOfDayResponse::Nack(_) |
+                    EndOfDayResponse::Abort(_) |
+                    EndOfDayResponse::CompletionData(_) => {
                         yield packet;
                         break;
                     }
@@ -427,7 +439,9 @@ impl Sequence for Reservation {
                 let packet = src.read_packet().await?;
                 src.write_packet(&packets::Ack {}).await?;
                 match packet {
-                    AuthorizationResponse::CompletionData(_) | AuthorizationResponse::Abort(_) => {
+                    AuthorizationResponse::Nack(_) |
+                    AuthorizationResponse::Abort(_) |
+                    AuthorizationResponse::CompletionData(_) => {
                         yield packet;
                         break;
                     }
@@ -495,8 +509,9 @@ impl Sequence for PartialReversal {
                 let packet = src.read_packet().await?;
                 src.write_packet(&packets::Ack {}).await?;
                 match packet {
-                    PartialReversalResponse::CompletionData(_)
-                    | PartialReversalResponse::PartialReversalAbort(_) => {
+                    // PartialReversalResponse::Nack(_) |
+                    PartialReversalResponse::PartialReversalAbort(_) |
+                    PartialReversalResponse::CompletionData(_) => {
                         yield packet;
                         break;
                     }
@@ -533,8 +548,9 @@ impl Sequence for PreAuthReversal {
                 let packet = src.read_packet().await?;
                 src.write_packet(&packets::Ack {}).await?;
                 match packet {
-                    PartialReversalResponse::CompletionData(_)
-                    | PartialReversalResponse::PartialReversalAbort(_) => {
+                    // PartialReversalResponse::Nack(_) |
+                    PartialReversalResponse::PartialReversalAbort(_) |
+                    PartialReversalResponse::CompletionData(_) => {
                         yield packet;
                         break;
                     }

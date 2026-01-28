@@ -1,3 +1,4 @@
+use crate::constants;
 use crate::{encoding, length, Zvt};
 
 pub mod tlv;
@@ -242,6 +243,16 @@ pub struct SetTerminalId {
 #[zvt_control_field(class = 0x06, instr = 0x1e)]
 pub struct Abort {
     pub error: u8,
+}
+
+impl std::fmt::Display for Abort {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use num_traits::FromPrimitive;
+        let err = constants::ErrorMessages::from_u8(self.error)
+            .map(|err| format!("Abort 0x{:02X} - {}", self.error, err.to_string()))
+            .unwrap_or_else(|| format!("Abort 0x{:02X}", self.error));
+        write!(f, "{}", err)
+    }
 }
 
 // Defined in 2.2.9
@@ -545,8 +556,15 @@ impl zvt_builder::ZvtSerializerImpl<zvt_builder::length::Empty, zvt_builder::enc
     }
 }
 
-
-
+impl std::fmt::Display for Nack {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use num_traits::FromPrimitive;
+        let err = constants::ErrorMessages::from_u8(self.code)
+            .map(|err| format!("Nack 0x{:02X} - {}", self.code, err.to_string()))
+            .unwrap_or_else(|| format!("Nack 0x{:02X}", self.code));
+        write!(f, "{}", err)
+    }
+}
 
 #[cfg(test)]
 pub mod tests {
