@@ -1,0 +1,24 @@
+[package]
+name = "zvt_simulator"
+edition = "2021"
+authors.workspace = true
+categories.workspace = true
+keywords.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+description = """
+Simulation of a payment terminal that speaks the ZVT protocol over TCP/IP.
+"""
+
+[dependencies]
+anyhow = "1.0.82"
+chrono = "0.4.42"
+env_logger = "0.10.0"
+log = "0.4.19"
+num-traits = "0.2.19"
+serde = { version = "1.0.185", features = ["derive"] }
+serde_json = "1.0.105"
+tokio = { version = "1.29.1", features = ["net", "io-util", "rt-multi-thread", "macros"] }
+tokio-stream = "0.1.14"
+zvt = { version = "0.1.0", path = "../zvt" }

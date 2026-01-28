@@ -6,6 +6,7 @@ members = [
    "zvt_cli", 
    "zvt_derive",
    "zvt_feig_terminal",
+   "zvt_simulator",
 ]
 
 [workspace.package]
