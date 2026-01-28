@@ -93,6 +93,9 @@ pub struct StatusInformation {
     #[zvt_bmp(number = 0x49, length = length::Fixed<2>, encoding = encoding::Bcd)]
     pub currency: Option<usize>,
 
+    #[zvt_bmp(number = 0x88, length = length::Fixed<3>, encoding = encoding::Bcd)]
+    pub turnover_record_number: Option<usize>,
+
     #[zvt_bmp(number = 0x8a)]
     pub zvt_card_type: Option<u8>,
 
