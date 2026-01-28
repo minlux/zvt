@@ -118,10 +118,15 @@ fn test_command() {
     );
 
     // Duplicate field b
-    let bytes = vec![13, 12, 14, 1, 3, 0, 0, 0, 2, 1, 3, 0, 3, 0, 0, 0, 2];
+    let bytes = vec![13, 12, 14, 1, 3, 0, 0, 0, 2, 1, 3, 0, 3, 0, 0, 0, 5];
     assert_eq!(
-        Bar::zvt_deserialize(&bytes),
-        Err(ZVTError::DuplicateTag(Tag(3)))
+        Bar::zvt_deserialize(&bytes).unwrap().0,
+        Bar {
+            a: 1,
+            b: Some(5),
+            c: 3,
+            d: None,
+        }
     );
 }
 

@@ -141,6 +141,16 @@ fn is_optional(ty: &syn::Type) -> bool {
     false
 }
 
+/// Check if a type is Vec<T>
+fn is_vec(ty: &syn::Type) -> bool {
+    if let syn::Type::Path(ref type_path) = ty {
+        if let Some(segment) = type_path.path.segments.last() {
+            return segment.ident == "Vec";
+        }
+    }
+    false
+}
+
 /// Serializes one field of a struct.
 fn derive_serialize_field(field: &syn::Field, options: &ZvtBmp) -> proc_macro2::TokenStream {
     let name = field.ident.as_ref().unwrap();
@@ -191,6 +201,9 @@ fn derive_deserialize_field(field: &syn::Field, options: &ZvtBmp) -> proc_macro2
 /// tagged fields can to be arbitrary since we can identify the fields by
 /// their tag.
 ///
+/// For Vec<T> fields, duplicate tags are allowed and items are pushed.
+/// For non-Vec fields, duplicate tags are also allowed, but produce a warning.
+///
 /// The generated macro is unhygienic and shall be used inside
 /// [derive_deserialize].
 fn derive_deserialize_field_tagged(
@@ -205,18 +218,39 @@ fn derive_deserialize_field_tagged(
         encoding_type,
     } = options;
 
-    quote! {
-        // The `#name` and `bytes` must be defined outside of this macro. This
-        // implements a match arm.
-        #number => {
-            if ! actual_tags.insert(#number) {
-                // The data contains duplicate fields.
-                return Err(zvt_builder::ZVTError::DuplicateTag(zvt_builder::Tag(#number)));
-            }
-            // Remove the number from the required tags.
-            required_tags.remove(&#number);
+    // Check if this is a Vec<T> field
+    if is_vec(ty) {
+        // For Vec<T>: Always allow duplicates, push each value
+        quote! {
+            // The `#name` and `bytes` must be defined outside of this macro. This
+            // implements a match arm.
+            #number => {
+                // Remove the number from the required tags.
+                required_tags.remove(&#number);
 
-            (#name, bytes) = <#ty as zvt_builder::ZvtSerializerImpl<#length_type, #encoding_type>>::deserialize_tagged(&bytes, Some(zvt_builder::Tag(#number)))?;
+                // For Vec, deserialize and push the value
+                let (item, new_bytes) = <#ty as zvt_builder::ZvtSerializerImpl<#length_type, #encoding_type>>::deserialize_tagged(&bytes, Some(zvt_builder::Tag(#number)))?;
+                // Push the deserialized item to the vector
+                #name.extend(item);
+                bytes = new_bytes;
+            }
+        }
+    } else {
+        // For non-Vec without allow_duplicates: Check for duplicates
+        quote! {
+            // The `#name` and `bytes` must be defined outside of this macro. This
+            // implements a match arm.
+            #number => {
+                if ! actual_tags.insert(#number) {
+                    // The data contains duplicate fields.
+                    // Newer value overwrites older value.
+                    log::warn!("Duplicate tag found: 0x{:X}", #number);
+                }
+                // Remove the number from the required tags.
+                required_tags.remove(&#number);
+
+                (#name, bytes) = <#ty as zvt_builder::ZvtSerializerImpl<#length_type, #encoding_type>>::deserialize_tagged(&bytes, Some(zvt_builder::Tag(#number)))?;
+            }
         }
     }
 }
@@ -250,12 +284,9 @@ fn derive_deserialize(
         }
     }
 
-    quote! {
-        fn decode<'a>(mut bytes: &'a [u8]) -> zvt_builder::ZVTResult<(#name, &'a [u8])> {
-            // The untagged fields are the positional fields and we deserialize
-            // them first.
-            #(#pos_field_quotes;)*
-
+    // Generate the while loop only if there are optional fields
+    let optional_parsing = if !opt_field_quotes.is_empty() {
+        quote! {
             // We have to track two things: if we have seen a value before and
             // if we have - in the end - seen all required tags (tags of fields
             // which aren't Option<T> type).
@@ -296,6 +327,18 @@ fn derive_deserialize(
                 as_vec.sort_by_key(|t| t.0);
                 return Err(zvt_builder::ZVTError::MissingRequiredTags(as_vec));
             }
+        }
+    } else {
+        quote! {}
+    };
+
+    quote! {
+        fn decode<'a>(mut bytes: &'a [u8]) -> zvt_builder::ZVTResult<(#name, &'a [u8])> {
+            // The untagged fields are the positional fields and we deserialize
+            // them first.
+            #(#pos_field_quotes;)*
+
+            #optional_parsing
 
             Ok((#name{
                 #(#field_names: #field_names),*
