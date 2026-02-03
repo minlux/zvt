@@ -250,6 +250,7 @@ pub enum Command {
     PrintLine(PrintLine),
     PrintTextBlock(PrintTextBlock),
     CompletionData(CompletionData),
+    Abort(Ack),
     Ack(Ack),
 }
 
@@ -265,6 +266,7 @@ impl std::fmt::Display for Command {
             Command::PrintLine(_) => write!(f, "PrintLine"),
             Command::PrintTextBlock(_) => write!(f, "PrintTextBlock"),
             Command::CompletionData(_) => write!(f, "CompletionData"),
+            Command::Abort(ack) => if ack.code == 0 { write!(f, "Abort") } else { write!(f, "Abort({})", ack.code) },
             Command::Ack(ack) => if ack.code == 0 { write!(f, "Ack") } else { write!(f, "Nack({})", ack.code) },
         }
     }
@@ -468,7 +470,7 @@ async fn handle_websocket(stream: TcpStream) -> Result<()> {
                             }
                             zvt::commands::Command::Abort(abort) => {
                                 let nack = zvt::packets::Nack { code: abort.error };
-                                _ = p2e_forward_nack(nack, &mut ws_tx).await;
+                                _ = p2e_forward_abort(nack, &mut ws_tx).await;
                             }
                             zvt::commands::Command::IntermediateStatusInformation(status_info) => {
                                 _ = p2e_forward_intermediate_status_information(status_info, &mut ws_tx).await;
@@ -685,6 +687,17 @@ async fn p2e_forward_nack(
 ) -> Result<(), String> {
     ws.send(tokio_tungstenite::tungstenite::Message::Text(
         serde_json::to_string(&Command::Ack(nack.into())).unwrap_or_default(),
+    ))
+    .await
+    .map_err(|e| format!("Failed to send Ack/Nack to WebSocket: {}", e))
+}
+
+async fn p2e_forward_abort(
+    nack: zvt::packets::Nack,
+    ws: &mut WsSink,
+) -> Result<(), String> {
+    ws.send(tokio_tungstenite::tungstenite::Message::Text(
+        serde_json::to_string(&Command::Abort(nack.into())).unwrap_or_default(),
     ))
     .await
     .map_err(|e| format!("Failed to send Ack/Nack to WebSocket: {}", e))
