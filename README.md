@@ -22,3 +22,19 @@ library.
 A useful standalone tool is [`feig_update`](zvt/src/bin/feig_update/main.rs)
 which we use in production to update the Firmware of our cVEND plug terminals.
 This will eventually also be folded into `zvt_cli`.
+
+
+## Cross build
+
+### Raspberry PI 32-bit
+
+```
+cross build --release --target armv7-unknown-linux-gnueabihf
+```
+
+### Raspberry PI 64-bit
+
+```
+cross build --release --target aarch64-unknown-linux-gnu
+```
+

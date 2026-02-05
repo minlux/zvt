@@ -349,7 +349,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn start_websocket_server(port: u16) -> Result<()> {
-    let addr = format!("127.0.0.1:{}", port);
+    // let addr = format!("127.0.0.1:{}", port); // Listen on localhost only
+    let addr = format!("0.0.0.0:{}", port); // Listen on all interfaces
     let listener = tokio::net::TcpListener::bind(&addr).await?;
 
     info!(target: "app", "WebSocket server listening on ws://{}", addr);
