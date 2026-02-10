@@ -43,9 +43,11 @@ fn init_logger() {
 async fn main() -> Result<()> {
     init_logger();
 
-    // Create TCP listener on localhost:22000
-    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 22000)).await?;
-    log::info!("Listening on localhost:22000");
+    // Create TCP listener
+    // Use Ipv4Addr::UNSPECIFIED to bind to all interfaces, which is more portable than "0.0.0.0"
+    // Use Ipv4Addr::LOCALHOST if you only want to accept connections from the local machine only (127.0.0.1)
+    let listener = TcpListener::bind((Ipv4Addr::UNSPECIFIED, 22000)).await?;
+    log::info!("Listening on 0.0.0.0:22000");
 
     // Create a new Arc<Mutex<bool>> to track registration state
     let registration = Arc::new(Mutex::new(false));
