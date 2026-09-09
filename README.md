@@ -34,7 +34,12 @@ cross build --release --target armv7-unknown-linux-gnueabihf
 
 ### Raspberry PI 64-bit
 
+
 ```
-cross build --release --target aarch64-unknown-linux-gnu
+cross build --release --target aarch64-unknown-linux-musl
 ```
 
+> Note: Using `aarch64-unknown-linux-musl` (instead of `aarch64-unknown-linux-gnu`) 
+> links againt *musl*, a smaller and simpler libc (instead of *glibc*, the standard linux C library).
+> Rust/cross link **static** agains *musl* (instead of **dynamic** against *glibc*).
+> This produces a single self-contained executable.

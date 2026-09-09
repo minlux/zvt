@@ -306,7 +306,7 @@ fn setup_logging(log_file: Option<&PathBuf>) -> Option<()> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // Setup CLI arguments
-    let cli = clap::Command::new("pdl-agent")
+    let cli = clap::Command::new("zvt_wsproxy")
         .version(VERSION)
         .about(DESCRIPTION)
         .args(&[
